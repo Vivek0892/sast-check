@@ -60,20 +60,3 @@ stages:
       displayName: 'Run Kube-score'
     # Note: Changed '/deployment' to '/k8s' to match standard naming conventions. Adjust as needed for your directory structure.
 
-- stage: Deploy
-  displayName: 'Deploy to AKS'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-  jobs:
-  - deployment: DeployToAKS
-    displayName: 'Deploy to Azure Kubernetes Service'
-    environment: 'MyAKSCluster'
-    pool:
-      vmImage: 'ubuntu-latest'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: echo "Deploying to AKS"
-            displayName: 'Deployment Script'
-  # Add your deployment steps here, such as kubectl apply commands to apply your Kubernetes manifests.
-  # This typically involves setting up a service connection to your AKS cluster and using kubectl task.
