@@ -8,7 +8,7 @@ variables:
   imageName: 'nodejs-app:$(Build.BuildId)'
   # Make sure to define 'dockerRegistryServiceConnection' in your Azure DevOps project settings
   # This should point to your service connection for the Azure Container Registry
-  dockerRegistryServiceConnection: 'cloud_resource'
+  dockerRegistryServiceConnection: 'cloud_regist'
 
 stages:
 - stage: Build
