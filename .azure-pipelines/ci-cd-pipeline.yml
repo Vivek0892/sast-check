@@ -39,7 +39,7 @@ stages:
       displayName: 'Push Image to Azure Container Registry'
       inputs:
         command: 'push'
-        repository: 'myvueapp.azurecr.io/nodejs-app'
+        repository: 'myvueapp.azurecr.io'
         tags: |
           $(imageName)
         containerRegistry: |
