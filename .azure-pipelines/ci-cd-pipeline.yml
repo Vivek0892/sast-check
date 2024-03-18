@@ -36,7 +36,6 @@ stages:
         containerRegistry: |
           $(dockerRegistryServiceConnection)
 
-stages:
   - stage: ValidateKubernetesManifests
     jobs:
       - job: KubeScoreValidation
