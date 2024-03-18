@@ -6,15 +6,21 @@ resources:
 
 variables:
   imageName: 'nodejs-app:$(Build.BuildId)'
+  # Make sure to define 'dockerRegistryServiceConnection' in your Azure DevOps project settings
+  # This should point to your service connection for the Azure Container Registry
+  dockerRegistryServiceConnection: 'Vivek0892'
 
 stages:
 - stage: Build
+  displayName: 'Build Image'
   jobs:
   - job: BuildImage
+    displayName: 'Build Docker Image'
     pool:
       vmImage: 'ubuntu-latest'
     steps:
     - task: Docker@2
+      displayName: 'Build and Tag Docker Image'
       inputs:
         command: 'build'
         dockerfile: '**/Dockerfile'
@@ -22,12 +28,15 @@ stages:
           $(imageName)
 
 - stage: Push
+  displayName: 'Push Image to ACR'
   jobs:
   - job: PushImage
+    displayName: 'Push Docker Image'
     pool:
       vmImage: 'ubuntu-latest'
     steps:
     - task: Docker@2
+      displayName: 'Push Image to Azure Container Registry'
       inputs:
         command: 'push'
         repository: 'myvueapp.azurecr.io/nodejs-app'
@@ -36,22 +45,27 @@ stages:
         containerRegistry: |
           $(dockerRegistryServiceConnection)
 
-  - stage: ValidateKubernetesManifests
-    jobs:
-      - job: KubeScoreValidation
-        pool:
-          vmImage: 'ubuntu-latest'
-        steps:
-          - checkout: self
-          - script: |
-              docker pull zegl/kube-score:latest
-              docker run --rm -v $(System.DefaultWorkingDirectory)/deployment:/k8s zegl/kube-score score /deployment/*.yaml
-            displayName: 'Run Kube-score'
+- stage: ValidateKubernetesManifests
+  displayName: 'Validate Kubernetes Manifests'
+  jobs:
+  - job: KubeScoreValidation
+    displayName: 'Kube-Score Validation'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - script: |
+        docker pull zegl/kube-score:latest
+        docker run --rm -v $(System.DefaultWorkingDirectory)/k8s:/k8s zegl/kube-score score /k8s/*.yaml
+      displayName: 'Run Kube-score'
+    # Note: Changed '/deployment' to '/k8s' to match standard naming conventions. Adjust as needed for your directory structure.
 
 - stage: Deploy
+  displayName: 'Deploy to AKS'
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
   - deployment: DeployToAKS
+    displayName: 'Deploy to Azure Kubernetes Service'
     environment: 'MyAKSCluster'
     pool:
       vmImage: 'ubuntu-latest'
@@ -60,3 +74,6 @@ stages:
         deploy:
           steps:
           - script: echo "Deploying to AKS"
+            displayName: 'Deployment Script'
+  # Add your deployment steps here, such as kubectl apply commands to apply your Kubernetes manifests.
+  # This typically involves setting up a service connection to your AKS cluster and using kubectl task.
