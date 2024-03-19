@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
       - name: nodejs-app
-        image: youracr.azurecr.io/nodejs-app:latest
+        image: myvueapp.azurecr.io/vnodeapp:$(Build.BuildId)
         ports:
         - containerPort: 8080
+
 
