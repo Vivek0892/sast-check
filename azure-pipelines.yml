@@ -1,3 +1,7 @@
+# Docker
+# Build and push an image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
 trigger:
 - main
 
@@ -5,11 +9,14 @@ resources:
 - repo: self
 
 variables:
+  # Container registry service connection established during pipeline creation
   dockerRegistryServiceConnection: 'a123596c-77df-4ed2-8b6e-8145e7a04e41'
   imageRepository: 'vnodeapp'
   containerRegistry: 'myvueapp.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
+
+  # Agent VM image name
   vmImageName: 'ubuntu-latest'
 
 stages:
@@ -19,7 +26,7 @@ stages:
   - job: Build
     displayName: Build
     pool:
-      type: server
+      vmImage: $(vmImageName)
     steps:
     - task: Docker@2
       displayName: Build and push an image to container registry
@@ -43,6 +50,7 @@ stages:
     - script: |
         echo "Listing contents of $(System.DefaultWorkingDirectory)"
         ls -la $(System.DefaultWorkingDirectory)
+      displayName: 'List Deployment Directory Contents'
     - script: |
         docker pull zegl/kube-score:latest
         docker run -d --name kube-score-runner -v $(System.DefaultWorkingDirectory)/k8s:/project zegl/kube-score score *.yaml
@@ -51,14 +59,93 @@ stages:
         if grep -q 'critical' kube-score-output.txt; then
           echo "##vso[task.setvariable variable=isCritical]true"
         fi
-        
-- stage: manual_approval
-  displayName: Manual Approval
-  dependsOn: []
+      displayName: 'Check for Critical Vulnerabilities'
+
+- stage: DeployToAKS
+  displayName: 'Deploy to AKS'
+  condition: eq(variables.isCritical, 'true')
   jobs:
-  - deployment: test_job
-    displayName: Manual Approval
+  - deployment: Deploy
+    displayName: 'Deploy to AKS'
+    pool:
+      vmImage: $(vmImageName)
     environment: sastcheck
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              # Docker
+# Build and push an image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: 'a123596c-77df-4ed2-8b6e-8145e7a04e41'
+  imageRepository: 'vnodeapp'
+  containerRegistry: 'myvueapp.azurecr.io'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build and push an image to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+
+- stage: ValidateKubernetesManifests
+  displayName: 'Run Kube-score'
+  jobs:
+  - job: KubeScoreValidation
+    displayName: 'KubeScore Validation'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - script: |
+        echo "Listing contents of $(System.DefaultWorkingDirectory)"
+        ls -la $(System.DefaultWorkingDirectory)
+      displayName: 'List Deployment Directory Contents'
+    - script: |
+        docker pull zegl/kube-score:latest
+        docker run -d --name kube-score-runner -v $(System.DefaultWorkingDirectory)/k8s:/project zegl/kube-score score *.yaml
+        docker logs kube-score-runner > kube-score-output.txt 2>&1
+    - script: |
+        if grep -q 'critical' kube-score-output.txt; then
+          echo "##vso[task.setvariable variable=isCritical]true"
+        fi
+      displayName: 'Check for Critical Vulnerabilities'
+
+- stage: DeployToAKS
+  displayName: 'Deploy to AKS'
+  condition: ne(variables.isCritical, 'true')
+  jobs:
+  - deployment: Deploy
+    displayName: 'Deploy to AKS'
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'sastcheck'
     strategy:
       runOnce:
         deploy:
@@ -71,8 +158,9 @@ stages:
               scriptLocation: 'inlineScript'
               inlineScript: |
                 set -e
+                echo "Setting AKS context"
                 az aks get-credentials --resource-group dont_let_the_bed_bug_bite --name MyAKSCluster --overwrite-existing
+
+                echo "Deploying to AKS..."
                 kubectl apply -f $(System.DefaultWorkingDirectory)/k8s
-
-
-
+            displayName: 'Deploy Application to AKS'
