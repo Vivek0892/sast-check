@@ -53,4 +53,4 @@ stages:
       displayName: 'List Deployment Directory Contents'
     - script: |
         docker pull zegl/kube-score:latest
-        docker run --rm -v $(System.DefaultWorkingDirectory):/project zegl/kube-score score *.yaml 
+        docker run --rm -v $(System.DefaultWorkingDirectory):/project zegl/kube-score score *.yaml > result.txt
