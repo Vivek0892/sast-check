@@ -48,8 +48,8 @@ stages:
     steps:
     - checkout: self
     - script: |
-        echo "Listing contents of $(System.DefaultWorkingDirectory)/deployment"
-        ls -la $(System.DefaultWorkingDirectory)/deployment
+        echo "Listing contents of $(System.DefaultWorkingDirectory)"
+        ls -la $(System.DefaultWorkingDirectory)
       displayName: 'List Deployment Directory Contents'
     - script: |
         docker pull zegl/kube-score:latest
