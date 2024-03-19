@@ -53,6 +53,49 @@ stages:
       displayName: 'List Deployment Directory Contents'
     - script: |
         docker pull zegl/kube-score:latest
-        docker run -d --name kube-score-runner -v $(System.DefaultWorkingDirectory):/project zegl/kube-score score *.yaml
-        docker logs kube-score-runner
+        docker run -d --name kube-score-runner -v $(System.DefaultWorkingDirectory)/k8s:/project zegl/kube-score score *.yaml
+        docker logs kube-score-runner > kube-score-output.txt 2>&1
+    - script: |
+        if grep -q 'critical' kube-score-output.txt; then
+          echo "##vso[task.setvariable variable=isCritical]true"
+        fi
+      displayName: 'Check for Critical Vulnerabilities'
 
+- stage: Approval
+  displayName: 'Manual Approval'
+  condition: eq(variables.isCritical, 'true')
+  jobs:
+  - job: WaitForApproval
+    displayName: 'Wait for Manual Approval'
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - checkout: none
+    - task: ManualValidation@0
+      inputs:
+        instructions: 'Critical vulnerabilities found. Review before proceeding.'
+        onTimeout: 'reject'
+
+- stage: DeployToAKS
+  displayName: 'Deploy to AKS'
+  condition: and(succeeded(), eq(variables.isCritical, 'false'))
+  jobs:
+  - job: Deploy
+    displayName: 'Deploy to AKS'
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'akscon'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -e
+          echo "Setting AKS context"
+          az aks get-credentials --resource-group dont_let_the_bed_bug_bite --name MyAKSCluster --overwrite-existing
+
+          echo "Deploying to AKS..."
+          kubectl apply -f $(System.DefaultWorkingDirectory)/k8s
+      displayName: 'Deploy Application to AKS'
