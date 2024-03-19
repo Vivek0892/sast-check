@@ -21,14 +21,33 @@ spec:
           limits:
             cpu: "1"
             memory: "500Mi"
+            ephemeral-storage: "1Gi"
           requests:
             cpu: "0.5"
             memory: "200Mi"
+            ephemeral-storage: "500Mi"
         imagePullPolicy: Always
         securityContext:
           runAsNonRoot: true
-          runAsUser: 1000
+          runAsUser: 10001
+          runAsGroup: 10001
           readOnlyRootFilesystem: true
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - nodejs-app
+            topologyKey: "kubernetes.io/hostname"
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -40,19 +59,23 @@ spec:
     matchLabels:
       app: nodejs-app
 ---
-kind: Deployment
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
 metadata:
-  name: nodejs-app
+  name: nodejs-app-network-policy
 spec:
-  template:
-    spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - nodejs-app
-            topologyKey: "kubernetes.io/hostname"
+  podSelector:
+    matchLabels:
+      app: nodejs-app
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
