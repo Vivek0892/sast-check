@@ -77,7 +77,7 @@ stages:
           - checkout: self
           - task: AzureCLI@2
             inputs:
-              azureSubscription: 'akscon'
+              azureSubscription: 'sast_for_pipeline'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
