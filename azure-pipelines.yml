@@ -52,38 +52,28 @@ stages:
           echo "##vso[task.setvariable variable=isCritical]true"
         fi
 
-- stage: Approval
-  displayName: 'Manual Approval'
-  condition: eq(variables.isCritical, 'true')
+trigger: none
+- stage: manual_approval
+  displayName: Manual Approval
+  dependsOn: []
   jobs:
-  - job: WaitForApproval
-    displayName: 'Wait for Manual Approval'
-    pool:
-      server: true
-    steps:
-    - checkout: none
-    - task: ManualValidation@0
-      timeoutInMinutes: 5
-      inputs:
-        instructions: 'Critical vulnerabilities found. Review before proceeding.'
-        onTimeout: 'reject'
+  - deployment: test_job
+    displayName: Manual Approval
+    environment: sastcheck
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'akscon'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -e
+                az aks get-credentials --resource-group dont_let_the_bed_bug_bite --name MyAKSCluster --overwrite-existing
+                kubectl apply -f $(System.DefaultWorkingDirectory)/k8s
 
-- stage: DeployToAKS
-  displayName: 'Deploy to AKS'
-  condition: and(succeeded(), eq(variables.isCritical, 'false'))
-  jobs:
-  - job: Deploy
-    displayName: 'Deploy to AKS'
-    pool:
-      vmImage: $(vmImageName)
-    steps:
-    - checkout: self
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'akscon'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          set -e
-          az aks get-credentials --resource-group dont_let_the_bed_bug_bite --name MyAKSCluster --overwrite-existing
-          kubectl apply -f $(System.DefaultWorkingDirectory)/k8s
+
+
