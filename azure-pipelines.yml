@@ -54,5 +54,4 @@ stages:
     - script: |
         docker pull zegl/kube-score:latest
         docker run -v $(System.DefaultWorkingDirectory):/project zegl/kube-score score *.yaml
-        docke
       displayName: 'Run Kube-score'
