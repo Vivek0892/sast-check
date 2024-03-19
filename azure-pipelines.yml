@@ -42,15 +42,16 @@ stages:
   displayName: 'Run Kube-score'
   jobs:
   - job: KubeScoreValidation
+    displayName: 'KubeScore Validation'
     pool:
       vmImage: 'ubuntu-latest'
     steps:
     - checkout: self
     - script: |
-    echo "Listing contents of $(System.DefaultWorkingDirectory)/deployment"
-    ls -la $(System.DefaultWorkingDirectory)/deployment
-  displayName: 'List Deployment Directory Contents'
+        echo "Listing contents of $(System.DefaultWorkingDirectory)/deployment"
+        ls -la $(System.DefaultWorkingDirectory)/deployment
+      displayName: 'List Deployment Directory Contents'
     - script: |
-    docker pull zegl/kube-score:latest
-    docker run --rm -v $(System.DefaultWorkingDirectory)/deployment:/deployment zegl/kube-score score /deployment/*.yaml
-  displayName: 'Run Kube-score'
+        docker pull zegl/kube-score:latest
+        docker run --rm -v $(System.DefaultWorkingDirectory)/deployment:/deployment zegl/kube-score score /deployment/*.yaml
+      displayName: 'Run Kube-score'
