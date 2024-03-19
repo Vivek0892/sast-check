@@ -37,3 +37,15 @@ stages:
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
+
+- stage: ValidateKubernetesManifests
+  displayName: 'Run Kube-score'
+  jobs:
+  - job: KubeScoreValidation
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - script: |
+       docker pull zegl/kube-score:latest
+       docker run --rm -v $(System.DefaultWorkingDirectory)/deployment:/deployment zegl/kube-score score /deployment/*.yaml
