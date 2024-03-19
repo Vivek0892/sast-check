@@ -17,5 +17,42 @@ spec:
         image: myvueapp.azurecr.io/vnodeapp:$(Build.BuildId)
         ports:
         - containerPort: 8080
-
-
+        resources:
+          limits:
+            cpu: "1"
+            memory: "500Mi"
+          requests:
+            cpu: "0.5"
+            memory: "200Mi"
+        imagePullPolicy: Always
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nodejs-app-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: nodejs-app
+---
+kind: Deployment
+metadata:
+  name: nodejs-app
+spec:
+  template:
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - nodejs-app
+            topologyKey: "kubernetes.io/hostname"
