@@ -38,8 +38,7 @@ stages:
         tags: |
           $(tag)
 
-stages:
-  - stage: ValidateKubernetesManifests
+- stage: ValidateKubernetesManifests
     jobs:
       - job: KubeScoreValidation
         pool:
@@ -49,4 +48,4 @@ stages:
           - script: |
               docker pull zegl/kube-score:latest
               docker run --rm -v $(System.DefaultWorkingDirectory)/deployment:/deployment zegl/kube-score score /deployment/*.yaml
-            displayName: 'Run Kube-score'
+            displayName: 'Run Kube-score'  
