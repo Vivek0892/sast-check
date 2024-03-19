@@ -51,8 +51,7 @@ stages:
         if grep -q 'critical' kube-score-output.txt; then
           echo "##vso[task.setvariable variable=isCritical]true"
         fi
-
-trigger: none
+        
 - stage: manual_approval
   displayName: Manual Approval
   dependsOn: []
