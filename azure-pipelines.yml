@@ -37,6 +37,7 @@ stages:
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
+          latest
 
 - stage: ValidateKubernetesManifests
   displayName: 'Run Kube-score'
