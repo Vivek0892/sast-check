@@ -55,6 +55,7 @@ stages:
     - script: |
         docker pull zegl/kube-score:latest
         docker run -d --name kube-score-runner -v $(System.DefaultWorkingDirectory)/k8s:/project zegl/kube-score score *.yaml
+        docker logs kube-score-runner
         docker logs kube-score-runner > kube-score-output.txt 2>&1
     - script: |
         if grep -q 'critical' kube-score-output.txt; then
